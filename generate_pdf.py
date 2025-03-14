@@ -4,11 +4,17 @@ class PDF(FPDF):
     def header(self):
         self.set_font('Arial', 'B', 12)
         self.cell(0, 10, 'TWBX File Analysis Report', 0, 1, 'C')
+        self.ln(10)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
 
     def chapter_title(self, title):
-        self.set_font('Arial', 'B', 12)
+        self.set_font('Arial', 'B', 14)
         self.cell(0, 10, title, 0, 1, 'L')
-        self.ln(10)
+        self.ln(5)
 
     def chapter_body(self, body):
         self.set_font('Arial', '', 12)
@@ -16,12 +22,12 @@ class PDF(FPDF):
         self.ln()
 
     def sub_chapter_title(self, title):
-        self.set_font('Arial', 'B', 10)
+        self.set_font('Arial', 'B', 12)
         self.cell(0, 10, title, 0, 1, 'L')
         self.ln(5)
 
     def sub_chapter_body(self, body):
-        self.set_font('Arial', '', 10)
+        self.set_font('Arial', '', 12)
         self.multi_cell(0, 10, body)
         self.ln()
 
@@ -29,52 +35,44 @@ def generate_pdf_report(analysis_data):
     pdf = PDF()
     pdf.add_page()
 
-    try:
-        # Adding Formulas
-        print("Formulas:", analysis_data['formulas'])
-        pdf.chapter_title('Formulas')
-        if analysis_data['formulas']:
-            for formula in analysis_data['formulas']:
-                pdf.chapter_body(formula)
-        else:
-            pdf.chapter_body('No formulas found.')
+    # Adding Formulas
+    pdf.chapter_title('Formulas')
+    if analysis_data['formulas']:
+        for formula in analysis_data['formulas']:
+            pdf.chapter_body(formula)
+    else:
+        pdf.chapter_body('No formulas found.')
 
-        # Adding Fields
-        print("Fields:", analysis_data['fields'])
-        pdf.chapter_title('Fields')
-        if analysis_data['fields']:
-            for field in analysis_data['fields']:
-                pdf.chapter_body(field)
-        else:
-            pdf.chapter_body('No fields found.')
+    # Adding Fields
+    pdf.chapter_title('Fields')
+    if analysis_data['fields']:
+        for field in analysis_data['fields']:
+            pdf.chapter_body(field)
+    else:
+        pdf.chapter_body('No fields found.')
 
-        # Adding Connections
-        print("Connections:", analysis_data['connections'])
-        pdf.chapter_title('Connections')
-        if analysis_data['connections']:
-            for connection in analysis_data['connections']:
-                conn_info = f"Type: {connection['type']}, DB Name: {connection['dbname']}, Server: {connection['server']}"
-                pdf.chapter_body(conn_info)
-        else:
-            pdf.chapter_body('No connections found.')
+    # Adding Connections
+    pdf.chapter_title('Connections')
+    if analysis_data['connections']:
+        for connection in analysis_data['connections']:
+            conn_info = f"Type: {connection['type']}, DB Name: {connection['dbname']}, Server: {connection['server']}"
+            pdf.chapter_body(conn_info)
+    else:
+        pdf.chapter_body('No connections found.')
 
-        # Adding Visuals
-        print("Visuals:", analysis_data['visual_names'])
-        pdf.chapter_title('Visuals')
-        if analysis_data['visual_names']:
-            for i, visual_name in enumerate(analysis_data['visual_names']):
-                pdf.sub_chapter_title(f"Visual {i + 1}: {visual_name}")
-                configurations = analysis_data['visual_configurations'][i]
-                if configurations:
-                    for config in configurations:
-                        pdf.sub_chapter_body(config)
-                else:
-                    pdf.sub_chapter_body('No configurations found.')
-        else:
-            pdf.chapter_body('No visuals found.')
-
-    except Exception as e:
-        print("Error generating PDF:", e)
+    # Adding Visuals
+    pdf.chapter_title('Visuals')
+    if analysis_data['visual_names']:
+        for i, visual_name in enumerate(analysis_data['visual_names']):
+            pdf.sub_chapter_title(f"Visual {i + 1}: {visual_name}")
+            configurations = analysis_data['visual_configurations'][i]
+            if configurations:
+                for config in configurations:
+                    pdf.sub_chapter_body(config)
+            else:
+                pdf.sub_chapter_body('No configurations found.')
+    else:
+        pdf.chapter_body('No visuals found.')
 
     pdf_path = 'report.pdf'
     pdf.output(pdf_path)
