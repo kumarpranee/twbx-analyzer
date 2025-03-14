@@ -25,7 +25,11 @@ def extract_formulas(root):
 def extract_fields(root):
     fields = []
     for field in root.findall('.//column'):
-        fields.append(field.get('caption'))
+        field_info = {
+            'caption': field.get('caption'),
+            'formula': field.find('.//calculation').get('formula') if field.find('.//calculation') is not None else None
+        }
+        fields.append(field_info)
     return fields
 
 def extract_connections(root):

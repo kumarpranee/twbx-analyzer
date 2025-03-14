@@ -5,13 +5,19 @@ def generate_excel_report(analysis_data, output_path='report.xlsx'):
 
     # Create DataFrame for formulas
     if analysis_data['formulas']:
-        formulas_df = pd.DataFrame({'Field': [f"Field {i+1}" for i in range(len(analysis_data['formulas']))], 'Calculation': analysis_data['formulas']})
+        formulas_df = pd.DataFrame({
+            'Field': [f"Field {i+1}" for i in range(len(analysis_data['formulas']))],
+            'Calculation': analysis_data['formulas'],
+        })
     else:
         formulas_df = pd.DataFrame(columns=['Field', 'Calculation'])
     formulas_df.to_excel(writer, sheet_name='Formulas', index=False)
 
     # Create DataFrame for fields
-    fields_df = pd.DataFrame({'Field': analysis_data['fields']})
+    if analysis_data['fields']:
+        fields_df = pd.DataFrame(analysis_data['fields'])
+    else:
+        fields_df = pd.DataFrame(columns=['Caption', 'Formula'])
     fields_df.to_excel(writer, sheet_name='Fields', index=False)
 
     # Create DataFrame for connections

@@ -1,11 +1,13 @@
 from flask import Flask, request, send_file, jsonify, render_template
 from werkzeug.utils import secure_filename
 import os
+import pandas as pd
 from analyze_twbx import analyze_twbx_file
 from generate_excel import generate_excel_report
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['OUTPUT_FOLDER'] = 'output'
 
 @app.route('/')
 def index():
@@ -28,8 +30,14 @@ def upload_file():
 def analyze_file():
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], os.listdir(app.config['UPLOAD_FOLDER'])[0])
     analysis_data = analyze_twbx_file(file_path)
-    excel_path = generate_excel_report(analysis_data)
-    return send_file(excel_path, as_attachment=True)
+    output_path = os.path.join(app.config['OUTPUT_FOLDER'], 'report.xlsx')
+    generate_excel_report(analysis_data, output_path)
+    return jsonify(success=True, message='Data extracted and Excel file generated')
+
+@app.route('/download', methods=['GET'])
+def download_file():
+    output_path = os.path.join(app.config['OUTPUT_FOLDER'], 'report.xlsx')
+    return send_file(output_path, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
