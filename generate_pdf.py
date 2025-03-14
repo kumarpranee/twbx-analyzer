@@ -21,63 +21,29 @@ class PDF(FPDF):
         self.multi_cell(0, 10, body)
         self.ln()
 
-    def sub_chapter_title(self, title):
+    def table(self, header, data):
         self.set_font('Arial', 'B', 12)
-        self.cell(0, 10, title, 0, 1, 'L')
-        self.ln(5)
-
-    def sub_chapter_body(self, body):
-        self.set_font('Arial', '', 12)
-        self.multi_cell(0, 10, body)
+        for col in header:
+            self.cell(95, 10, col, 1)
         self.ln()
+        self.set_font('Arial', '', 12)
+        for row in data:
+            for item in row:
+                self.cell(95, 10, item, 1)
+            self.ln()
 
 def generate_pdf_report(analysis_data):
     pdf = PDF()
     pdf.add_page()
 
     try:
-        # Adding Formulas
-        print("Formulas:", analysis_data['formulas'])
-        pdf.chapter_title('Formulas')
+        # Adding Calculated Fields
+        pdf.chapter_title('Calculated Fields')
         if analysis_data['formulas']:
-            for formula in analysis_data['formulas']:
-                pdf.chapter_body(formula)
+            formula_data = [(f"Field {i+1}", formula) for i, formula in enumerate(analysis_data['formulas'])]
+            pdf.table(['Field', 'Calculation'], formula_data)
         else:
-            pdf.chapter_body('No formulas found.')
-
-        # Adding Fields
-        print("Fields:", analysis_data['fields'])
-        pdf.chapter_title('Fields')
-        if analysis_data['fields']:
-            for field in analysis_data['fields']:
-                pdf.chapter_body(field)
-        else:
-            pdf.chapter_body('No fields found.')
-
-        # Adding Connections
-        print("Connections:", analysis_data['connections'])
-        pdf.chapter_title('Connections')
-        if analysis_data['connections']:
-            for connection in analysis_data['connections']:
-                conn_info = f"Type: {connection['type']}, DB Name: {connection['dbname']}, Server: {connection['server']}"
-                pdf.chapter_body(conn_info)
-        else:
-            pdf.chapter_body('No connections found.')
-
-        # Adding Visuals
-        print("Visuals:", analysis_data['visual_names'])
-        pdf.chapter_title('Visuals')
-        if analysis_data['visual_names']:
-            for i, visual_name in enumerate(analysis_data['visual_names']):
-                pdf.sub_chapter_title(f"Visual {i + 1}: {visual_name}")
-                configurations = analysis_data['visual_configurations'][i]
-                if configurations:
-                    for config in configurations:
-                        pdf.sub_chapter_body(config)
-                else:
-                    pdf.sub_chapter_body('No configurations found.')
-        else:
-            pdf.chapter_body('No visuals found.')
+            pdf.chapter_body('No calculated fields found.')
 
     except Exception as e:
         print("Error generating PDF:", e)
