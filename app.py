@@ -1,8 +1,8 @@
-from flask import Flask, request, send_file, jsonify, render_template
+from flask import Flask, request, jsonify, render_template
 from werkzeug.utils import secure_filename
 import os
-from analyze_twbx import analyze_twbx_file  # You need to implement this function
-from generate_pdf import generate_pdf_report  # You need to implement this function
+from analyze_twbx import analyze_twbx_file
+from load_to_db import load_data_to_db
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -28,8 +28,17 @@ def upload_file():
 def analyze_file():
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], os.listdir(app.config['UPLOAD_FOLDER'])[0])
     analysis_data = analyze_twbx_file(file_path)
-    pdf_path = generate_pdf_report(analysis_data)
-    return send_file(pdf_path, as_attachment=True)
+    
+    db_config = {
+        'dbname': 'your_db_name',
+        'user': 'your_db_user',
+        'password': 'your_db_password',
+        'host': 'your_db_host',
+        'port': 'your_db_port'
+    }
+
+    load_data_to_db(analysis_data, db_config)
+    return jsonify(success=True, message='Data loaded into the database successfully')
 
 if __name__ == '__main__':
     app.run(debug=True)
