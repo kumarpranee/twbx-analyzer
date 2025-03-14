@@ -29,6 +29,38 @@ def generate_excel_report(analysis_data, output_path='report.xlsx'):
     visuals_df = pd.DataFrame(visuals_data)
     visuals_df.to_excel(writer, sheet_name='Visuals', index=False)
 
+    # Create DataFrame for all elements
+    all_elements_df = pd.DataFrame(analysis_data['all_elements'])
+    all_elements_df.to_excel(writer, sheet_name='All Elements', index=False)
+
+    # Create DataFrame for datasources
+    datasources_df = pd.DataFrame(analysis_data['datasources'])
+    datasources_df.to_excel(writer, sheet_name='Datasources', index=False)
+
+    # Create DataFrame for actions
+    actions_df = pd.DataFrame(analysis_data['actions'])
+    actions_df.to_excel(writer, sheet_name='Actions', index=False)
+
+    # Create DataFrame for worksheets
+    worksheets_df = pd.DataFrame(analysis_data['worksheets'])
+    worksheets_df.to_excel(writer, sheet_name='Worksheets', index=False)
+
+    # Create DataFrame for dashboards
+    dashboards_df = pd.DataFrame(analysis_data['dashboards'])
+    dashboards_df.to_excel(writer, sheet_name='Dashboards', index=False)
+
+    # Create DataFrame for windows
+    windows_df = pd.DataFrame(analysis_data['windows'])
+    windows_df.to_excel(writer, sheet_name='Windows', index=False)
+
+    # Create DataFrame for datagraph
+    datagraph_df = pd.DataFrame(analysis_data['datagraph'])
+    datagraph_df.to_excel(writer, sheet_name='Datagraph', index=False)
+
+    # Create DataFrame for external
+    external_df = pd.DataFrame(analysis_data['external'])
+    external_df.to_excel(writer, sheet_name='External', index=False)
+
     # Close the Pandas Excel writer and output the Excel file.
     writer.close()
 

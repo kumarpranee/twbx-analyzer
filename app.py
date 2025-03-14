@@ -1,7 +1,6 @@
 from flask import Flask, request, send_file, jsonify, render_template
 from werkzeug.utils import secure_filename
 import os
-import pandas as pd
 from analyze_twbx import analyze_twbx_file
 from generate_excel import generate_excel_report
 

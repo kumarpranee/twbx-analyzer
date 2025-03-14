@@ -16,6 +16,59 @@ def parse_twb_file(twb_file_path):
     root = tree.getroot()
     return root
 
+def extract_all_elements(root):
+    elements = []
+    for elem in root.iter():
+        element_info = {
+            'tag': elem.tag,
+            'attributes': elem.attrib,
+            'text': elem.text.strip() if elem.text else ''
+        }
+        elements.append(element_info)
+    return elements
+
+def extract_datasources(root):
+    datasources = []
+    for datasource in root.findall('.//datasource'):
+        datasources.append(datasource.attrib)
+    return datasources
+
+def extract_actions(root):
+    actions = []
+    for action in root.findall('.//action'):
+        actions.append(action.attrib)
+    return actions
+
+def extract_worksheets(root):
+    worksheets = []
+    for worksheet in root.findall('.//worksheet'):
+        worksheets.append(worksheet.attrib)
+    return worksheets
+
+def extract_dashboards(root):
+    dashboards = []
+    for dashboard in root.findall('.//dashboard'):
+        dashboards.append(dashboard.attrib)
+    return dashboards
+
+def extract_windows(root):
+    windows = []
+    for window in root.findall('.//window'):
+        windows.append(window.attrib)
+    return windows
+
+def extract_datagraph(root):
+    datagraph = []
+    for dg in root.findall('.//datagraph'):
+        datagraph.append(dg.attrib)
+    return datagraph
+
+def extract_external(root):
+    external = []
+    for ext in root.findall('.//external'):
+        external.append(ext.attrib)
+    return external
+
 def extract_formulas(root):
     formulas = []
     for formula in root.findall('.//calculation'):
@@ -25,11 +78,7 @@ def extract_formulas(root):
 def extract_fields(root):
     fields = []
     for field in root.findall('.//column'):
-        field_info = {
-            'caption': field.get('caption'),
-            'formula': field.find('.//calculation').get('formula') if field.find('.//calculation') is not None else None
-        }
-        fields.append(field_info)
+        fields.append(field.get('caption'))
     return fields
 
 def extract_connections(root):
@@ -59,7 +108,15 @@ def analyze_twbx_file(file_path):
         'fields': [],
         'connections': [],
         'visual_names': [],
-        'visual_configurations': []
+        'visual_configurations': [],
+        'all_elements': [],
+        'datasources': [],
+        'actions': [],
+        'worksheets': [],
+        'dashboards': [],
+        'windows': [],
+        'datagraph': [],
+        'external': []
     }
 
     twb_file = extract_twb_file(file_path)
@@ -74,5 +131,13 @@ def analyze_twbx_file(file_path):
     visuals = extract_visuals(root)
     analysis_data['visual_names'] = [visual['name'] for visual in visuals]
     analysis_data['visual_configurations'] = [visual['configurations'] for visual in visuals]
+    analysis_data['all_elements'] = extract_all_elements(root)
+    analysis_data['datasources'] = extract_datasources(root)
+    analysis_data['actions'] = extract_actions(root)
+    analysis_data['worksheets'] = extract_worksheets(root)
+    analysis_data['dashboards'] = extract_dashboards(root)
+    analysis_data['windows'] = extract_windows(root)
+    analysis_data['datagraph'] = extract_datagraph(root)
+    analysis_data['external'] = extract_external(root)
 
     return analysis_data
