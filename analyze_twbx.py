@@ -18,12 +18,15 @@ def parse_twb_file(twb_file_path):
 
 def extract_dashboards_with_viewpoints(root):
     dashboards = []
-    for dashboard in root.findall(".//dashboard[@class='dashboard']"):
-        dashboard_info = {
-            'name': dashboard.get('name'),
-            'viewpoint': dashboard.find('.//viewpoint').get('name') if dashboard.find('.//viewpoint') is not None else None
-        }
-        dashboards.append(dashboard_info)
+    for window in root.findall(".//window[@class='dashboard']"):
+        dashboard_name = window.get('name')
+        viewpoints = [vp.get('name') for vp in window.findall('.//viewpoint')]
+        for viewpoint in viewpoints:
+            dashboard_info = {
+                'name': window.get('name'),
+                'visuals_to_include': viewpoint  # Each viewpoint will be a separate row
+            }
+            dashboards.append(dashboard_info)
     return dashboards
 
 def analyze_twbx_file(file_path):
