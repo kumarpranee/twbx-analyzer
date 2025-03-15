@@ -43,18 +43,17 @@ def extract_worksheets_and_tables(root):
             for panes in table.findall(".//panes"):
                 for pane in panes.findall(".//pane"):
                     pane_name = pane.get('id')
-                    for encoding in pane.findall(".//encodings"):
-                        #encoding_field = encoding.get('field')
-                        element_info = {
-                            'worksheet': worksheet_name,
-                            'table': table_name,
-                            'view': view.get('name') if view is not None else None,
-                            'style': style.get('name') if style is not None else None,
-                            'pane': f"{pane_name} - {encoding}",
-                            'rows': rows.get('name') if rows is not None else None,
-                            'cols': cols.get('name') if cols is not None else None
-                        }
-                        worksheets.append(element_info)
+                    # Removed the for loop for encodings
+                    element_info = {
+                        'worksheet': worksheet_name,
+                        'table': table_name,
+                        'view': view.get('name') if view is not None else None,
+                        'style': style.get('name') if style is not None else None,
+                        'pane': pane_name,
+                        'rows': rows.get('name') if rows is not None else None,
+                        'cols': cols.get('name') if cols is not None else None
+                    }
+                    worksheets.append(element_info)
     return worksheets
 
 def analyze_twbx_file(file_path):
