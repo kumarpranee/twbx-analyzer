@@ -37,9 +37,11 @@ def extract_worksheets_and_tables(root):
             table_name = table.get('name')
             view = table.find(".//view")
             style = table.find(".//style")
-            rows = table.find(".//rows").text
-            cols = table.find(".//cols").text
-            print(cols)
+            rows = table.find(".//rows")
+            cols = table.find(".//cols")
+
+            row_names = [row.get('column') for row in rows.findall(".//row")] if rows is not None else []
+            col_names = [col.get('column') for col in cols.findall(".//column")] if cols is not None else []
 
             for panes in table.findall(".//panes"):
                 for pane in panes.findall(".//pane"):
@@ -55,8 +57,8 @@ def extract_worksheets_and_tables(root):
                             'table': table_name,
                             'view': view.get('name') if view is not None else None,
                             'style': style.get('name') if style is not None else None,
-                            'rows': rows,
-                            'cols': cols,
+                            'rows': ', '.join(row_names) if row_names else None,
+                            'cols': ', '.join(col_names) if col_names else None,
                             'lod_columns': ', '.join(lod_columns),
                             'tooltip_columns': ', '.join(tooltip_columns),
                             'color_columns': ', '.join(color_columns),
@@ -64,6 +66,33 @@ def extract_worksheets_and_tables(root):
                             'text_columns': ', '.join(text_columns)
                         }
                         worksheets.append(element_info)
+                        
+            for view in table.findall(".//view"):
+                view_name = view.get('name')
+                for list_filter in view.findall(".//list"):
+                    list_filter_class = list_filter.get('class')
+                    list_filter_column = list_filter.get('column')
+                    element_info = {
+                        'worksheet': worksheet_name,
+                        'table': table_name,
+                        'view': view_name,
+                        'list_filter_class': list_filter_class,
+                        'list_filter_column': list_filter_column
+                    }
+                    worksheets.append(element_info)
+                    
+                for record in view.findall(".//record"):
+                    record_class = record.get('class')
+                    record_column = record.get('column')
+                    element_info = {
+                        'worksheet': worksheet_name,
+                        'table': table_name,
+                        'view': view_name,
+                        'record_class': record_class,
+                        'record_column': record_column
+                    }
+                    worksheets.append(element_info)
+                    
     return worksheets
 
 def analyze_twbx_file(file_path):
