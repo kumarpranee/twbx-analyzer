@@ -37,23 +37,33 @@ def extract_worksheets_and_tables(root):
             table_name = table.get('name')
             view = table.find(".//view")
             style = table.find(".//style")
-            rows = table.find(".//rows")
-            cols = table.find(".//cols")
-            
+            rows = table.find(".//rows").text
+            cols = table.find(".//cols").text
+            print(cols)
+
             for panes in table.findall(".//panes"):
                 for pane in panes.findall(".//pane"):
-                    pane_name = pane.get('id')
-                    # Removed the for loop for encodings
-                    element_info = {
-                        'worksheet': worksheet_name,
-                        'table': table_name,
-                        'view': view.get('name') if view is not None else None,
-                        'style': style.get('name') if style is not None else None,
-                        'pane': pane_name,
-                        'rows': rows.get('name') if rows is not None else None,
-                        'cols': cols.get('name') if cols is not None else None
-                    }
-                    worksheets.append(element_info)
+                    for encoding in pane.findall(".//encodings"):
+                        lod_columns = [lod.get('column') for lod in encoding.findall(".//lod")]
+                        tooltip_columns = [tooltip.get('column') for tooltip in encoding.findall(".//tooltip")]
+                        color_columns = [color.get('column') for color in encoding.findall(".//color")]
+                        shape_columns = [shape.get('column') for shape in encoding.findall(".//shape")]
+                        text_columns = [text.get('column') for text in encoding.findall(".//text")]
+
+                        element_info = {
+                            'worksheet': worksheet_name,
+                            'table': table_name,
+                            'view': view.get('name') if view is not None else None,
+                            'style': style.get('name') if style is not None else None,
+                            'rows': rows,
+                            'cols': cols,
+                            'lod_columns': ', '.join(lod_columns),
+                            'tooltip_columns': ', '.join(tooltip_columns),
+                            'color_columns': ', '.join(color_columns),
+                            'shape_columns': ', '.join(shape_columns),
+                            'text_columns': ', '.join(text_columns)
+                        }
+                        worksheets.append(element_info)
     return worksheets
 
 def analyze_twbx_file(file_path):
