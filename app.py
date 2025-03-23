@@ -4,6 +4,7 @@ import pandas as pd
 import zipfile
 from tableauhyperapi import HyperProcess, Connection, Telemetry, TableName, Name
 import xml.etree.ElementTree as ET
+from fpdf import FPDF
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
@@ -26,20 +27,28 @@ def upload_file():
         filepath = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(filepath)
         try:
-            excel_filepath = extract_and_convert_to_excel(filepath)
-            return {'message': 'File uploaded successfully', 'excel_path': excel_filepath}
+            excel_filepath, pdf_filepath = extract_and_convert_to_files(filepath)
+            return {'message': 'File uploaded successfully', 'excel_path': excel_filepath, 'pdf_path': pdf_filepath}
         except FileNotFoundError as e:
             return str(e), 400
     return 'Invalid file format', 400
 
 @app.route('/download', methods=['GET'])
 def download_file():
-    excel_filepath = os.path.join(DOWNLOAD_FOLDER, 'output.xlsx')
-    if os.path.exists(excel_filepath):
-        return send_file(excel_filepath, as_attachment=True)
-    return 'Excel file not found', 404
+    file_type = request.args.get('type')
+    if file_type == 'excel':
+        excel_filepath = os.path.join(DOWNLOAD_FOLDER, 'output.xlsx')
+        if os.path.exists(excel_filepath):
+            return send_file(excel_filepath, as_attachment=True)
+        return 'Excel file not found', 404
+    elif file_type == 'pdf':
+        pdf_filepath = os.path.join(DOWNLOAD_FOLDER, 'output.pdf')
+        if os.path.exists(pdf_filepath):
+            return send_file(pdf_filepath, as_attachment=True)
+        return 'PDF file not found', 404
+    return 'Invalid file type', 400
 
-def extract_and_convert_to_excel(filepath):
+def extract_and_convert_to_files(filepath):
     with zipfile.ZipFile(filepath, 'r') as z:
         z.extractall(UPLOAD_FOLDER)
         # Log the names of the extracted files
@@ -57,22 +66,10 @@ def extract_and_convert_to_excel(filepath):
 
         if hyper_file and twb_file:
             excel_filepath = parse_hyper_and_twb_to_excel(hyper_file, twb_file)
-            return excel_filepath
+            pdf_filepath = generate_pdf_report(twb_file)
+            return excel_filepath, pdf_filepath
         else:
             raise FileNotFoundError(f'.hyper or .twb file not found. Available files: {extracted_files}')
-
-def tableau_to_dax(calculation):
-    # Very simple conversion example - this should be extended to handle more cases
-    conversion_dict = {
-        'SUM': 'SUM',
-        'AVG': 'AVERAGE',
-        'COUNT': 'COUNT',
-        'MIN': 'MIN',
-        'MAX': 'MAX'
-    }
-    for tableau_func, dax_func in conversion_dict.items():
-        calculation = calculation.replace(tableau_func, dax_func)
-    return calculation
 
 def parse_zone(zone, dashboard_name):
     zone_style = zone.find('.//zone-style')
@@ -129,28 +126,40 @@ def parse_hyper_and_twb_to_excel(hyper_file, twb_file):
 
                 datasource_detail = {
                     'Name': datasource.get('name'),
-                    'Caption': datasource.get('caption', ''),
-                    'Connection': datasource.get('connection', '')
+                    'Caption': datasource.get('caption', '')
                 }
+                
+                named_connection = datasource.find(".//connection/named-connections/named-connection/connection")
+                if named_connection is not None:
+                    datasource_detail.update({
+                        'Class': named_connection.get('class', 'N/A'),
+                        'Cleaning': named_connection.get('cleaning', 'N/A'),
+                        'Compat': named_connection.get('compat', 'N/A'),
+                        'DataRefreshTime': named_connection.get('dataRefreshTime', 'N/A'),
+                        'InterpretationMode': named_connection.get('interpretationMode', 'N/A'),
+                        'Validate': named_connection.get('validate', 'N/A'),
+                        'WorkgroupAuthMode': named_connection.get('workgroup-auth-mode', 'N/A')
+                    })
+                
                 datasources_data.append(datasource_detail)
 
                 for column in datasource.findall('.//column'):
+                    if '[__tableau_internal_object_id__]' in column.get('name', ''):
+                        continue  # Exclude columns with name like [__tableau_internal_object_id__]
+
                     field = {
                         'Name': column.get('name'),
                         'Hidden': column.get('hidden', 'false'),
                         'Type': column.get('datatype'),
                         'Role': column.get('role'),
-                        'Calculation': ''
+                        'Calculation': '',
+                        'Datasource Name': datasource.get('name')
                     }
                     calculation = column.find('.//calculation')
                     if calculation is not None:
                         field['Calculation'] = calculation.get('formula')
                         field['Caption'] = column.get('caption', '')
-                        field['DAX'] = tableau_to_dax(field['Calculation'])
-                        if 'Parameter' in field['Name']:
-                            parameters_data.append(field)
-                        else:
-                            calculated_fields_data.append(field)
+                        calculated_fields_data.append(field)
                     else:
                         fields_data.append(field)
 
@@ -195,25 +204,72 @@ def parse_hyper_and_twb_to_excel(hyper_file, twb_file):
                 }
                 windows_data.append(window_detail)
 
-            # Remove duplicate data
+            # Remove duplicate data and records where Role is empty
             df_fields = pd.DataFrame(fields_data).drop_duplicates()
+            df_fields = df_fields[df_fields['Role'].notna() & (df_fields['Role'] != '')]
             df_calculated_fields = pd.DataFrame(calculated_fields_data).drop_duplicates()
             df_parameters = pd.DataFrame(parameters_data).drop_duplicates()
-            df_datasources = pd.DataFrame(datasources_data).drop_duplicates()
+            df_datasources = pd.DataFrame(datasources_data).drop_duplicates(subset=['Name'])
             df_dashboards = pd.DataFrame(dashboards_data).drop_duplicates()
             df_zones = pd.DataFrame(zones_data).drop_duplicates()
             df_windows = pd.DataFrame(windows_data).drop_duplicates()
 
             with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
+                df_datasources.to_excel(writer, sheet_name='DataSources', index=False)
                 df_fields.to_excel(writer, sheet_name='Fields', index=False)
                 df_calculated_fields.to_excel(writer, sheet_name='Calculated Fields', index=False)
                 df_parameters.to_excel(writer, sheet_name='Parameters', index=False)
-                df_datasources.to_excel(writer, sheet_name='DataSources', index=False)
                 df_dashboards.to_excel(writer, sheet_name='Dashboards', index=False)
                 df_zones.to_excel(writer, sheet_name='Zones', index=False)
                 df_windows.to_excel(writer, sheet_name='Windows', index=False)
 
     return output_excel
+
+def generate_pdf_report(twb_file):
+    output_pdf = os.path.join(DOWNLOAD_FOLDER, 'output.pdf')
+
+    # Parse the .twb file to extract data source details and fields
+    tree = ET.parse(twb_file)
+    root = tree.getroot()
+
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    for datasource in root.findall('.//datasource'):
+        if datasource.get('hasconnection', 'true') == 'false':
+            continue  # Exclude data sources with hasconnection='false'
+        if 'Parameters' in datasource.get('name', ''):
+            continue  # Exclude data sources with name containing 'Parameters'
+
+        # Add data source caption
+        caption = datasource.get('caption', '')
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(200, 10, txt=f"Datasource: {caption}", ln=True, align='L')
+
+        # Add table header
+        pdf.set_font("Arial", 'B', 10)
+        pdf.cell(60, 10, txt="Name", border=1)
+        pdf.cell(60, 10, txt="Type", border=1)
+        pdf.cell(60, 10, txt="Role", border=1)
+        pdf.ln()
+
+        # Add fields
+        pdf.set_font("Arial", size=10)
+        for column in datasource.findall('.//column'):
+            if '[__tableau_internal_object_id__]' in column.get('name', ''):
+                continue  # Exclude columns with name like [__tableau_internal_object_id__]
+            name = column.get('name', '')
+            type_ = column.get('datatype', '')
+            role = column.get('role', '')
+            pdf.cell(60, 10, txt=name, border=1)
+            pdf.cell(60, 10, txt=type_, border=1)
+            pdf.cell(60, 10, txt=role, border=1)
+            pdf.ln()
+
+    pdf.output(output_pdf)
+    return output_pdf
 
 if __name__ == '__main__':
     app.run(debug=True)
